@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloneFlow - Recuperação de Sites</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap'); 
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: "Tiny5", serif;
+            background: linear-gradient(45deg, #0f2027, #203a43, #2c5364);
+            background-size: 300% 300%;
+            color: white;
+            text-align: center;
+            overflow: hidden;
+            animation: gradient 10s ease infinite;
+            perspective: 1000px;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 800px;
+            animation: fadeInUp 1.5s ease forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            cursor: pointer;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(255, 255, 255, 1);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            margin: 0;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease forwards;
+            animation-delay: 0.5s;
+        }
+
+        .description {
+            font-size: 1.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 10px 0 20px;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease forwards;
+            animation-delay: 0.8s;
+        }
+
+        .simple {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-family: 'Courier New', Courier, monospace;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease forwards;
+            animation-delay: 1.1s;
+        }
+
+        .button {
+            margin-top: 30px;
+            padding: 15px 30px;
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease forwards;
+            animation-delay: 1.4s;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.5s;
+        }
+
+        .button:hover::before {
+            left: 100%;
+        }
+
+        .button:hover {
+            background-color: #e68900;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">ClonƎFlow</div>
+        <h1>Perdeu o acesso ao seu site? Nós recuperamos pra você!</h1>
+        <p class="description">
+            Todo o conteúdo, toda a estrutura, exatamente como era. <br>
+            Você só muda o domínio, o resto permanece o mesmo.
+        </p>
+        <p class="simple">
+            Simples e prático.<br>
+            Como esse site.
+        </p>
+        <button class="button" onclick="window.location.href='https://wa.me/5551981164772'">Saiba Mais</button>
+    </div>
+</body>
+</html>
