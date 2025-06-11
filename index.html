@@ -1,85 +1,723 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CloneFlow</title>
+    <title>Prova Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap'); 
-
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: "Tiny5", serif;
-            background: linear-gradient(45deg, #0f2027, #203a43, #2c5364);
-            background-size: 300% 300%;
-            color: white;
-            overflow: hidden;
-            animation: gradient 8s ease infinite;
-        }
-
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .container {
-            text-align: center;
-            position: relative;
-        }
-
-        .title {
-            font-size: 4rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-            transition: transform 0.3s ease, text-shadow 0.3s ease;
-            animation: float 3s ease-in-out infinite;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
-        }
-
-        .title:hover {
-            transform: scale(1.1);
-            text-shadow: 0 0 20px rgba(255, 255, 255, 1);
-        }
-
-        .title::before {
-            content: "CloneFlow";
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            color: rgba(255, 255, 255, 0.2);
-            transform: scaleY(-1);
-            transform-origin: bottom;
-            filter: blur(8px);
-            opacity: 0.7;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-
-        a {
-            text-decoration: none;
-            color: white;
-        }
+        body { font-family: Arial, sans-serif; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
+        .start-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 70vh; }
+        .question { margin: 2rem; }
+        .timer { color: #4b5563; font-weight: bold; margin-top: 1rem; }
+        .code-block { background-color: #f4f4f4; padding: 1rem; border-radius: 0.5rem; font-family: 'Courier New', Courier, monospace; white-space: pre-wrap; }
+        .reorder-item { display: flex; align-items: center; margin: 0.5rem 0; }
+        .reorder-item input { width: 50px; margin-right: 1rem; background-color: #e0f7fa; border: 2px solid #a3e4d7; border-radius: 4px; padding: 2px; transition: border-color 0.3s; }
+        .reorder-item input:focus { border-color: #27ae60; outline: none; background-color: #d1f2eb; }
+        .option-button { background-color: #e5e7eb; padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0.25rem; cursor: pointer; width: 100%; text-align: left; }
+        .option-button.selected { background-color: #3b82f6; color: white; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="title"><a href="pagina1.html">ClonƎFlow</a></div>
+<body class="bg-gray-200 p-6">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-xl" id="main-content">
+        <h1 class="text-3xl font-bold mb-6 text-center" id="header-title">Prova Online</h1>
+        <div id="content" class="mb-6"></div>
+        <div id="timer" class="timer"></div>
+        <div class="flex justify-center space-x-4" id="controls"></div>
+        <p id="warning" class="text-red-500 font-semibold hidden mt-4 text-center"></p>
     </div>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+    </script>
+    <script>
+        let studentName = "";
+        let currentQuestion = 0;
+        let answers = {};
+        let answerChanges = {};
+        let responseTimes = {};
+        let infractions = [];
+        let timeAway = {};
+        let timerInterval = null;
+        let dragStart = null;
+        let blinkInterval = null;
+        let questionStartTime = null;
+        let selectedOption = null;
+
+        const quizData = [
+            {
+                id: 1,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>x = 10<br>y = 3<br>print(x % y)</div>",
+                options: ["3", "7", "30", "1"],
+                timeLimit: 200
+            },
+            {
+                id: 2,
+                text: "Qual é o valor de z após a execução do seguinte código?<br><div class='code-block'>z = 5<br>z *= 4<br>print(z)</div>",
+                options: ["9", "20", "1", "5"],
+                timeLimit: 200
+            },
+            {
+                id: 3,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>a = 15<br>b = 10<br>print(a >= b)</div>",
+                options: ["True", "False", "15", "10"],
+                timeLimit: 200
+            },
+            {
+                id: 4,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>x = 8<br>y = 2<br>print(x > 5 and y < 3)</div>",
+                options: ["False", "True", "8", "2"],
+                timeLimit: 200
+            },
+            {
+                id: 5,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>lista = ['gato', 'cachorro', 'pássaro']<br>animal = 'gato'<br>print(animal in lista)</div>",
+                options: ["False", "True", "gato", "None"],
+                timeLimit: 200
+            },
+            {
+                id: 6,
+                text: "Qual é o tipo de dado retornado pelo seguinte código?<br><div class='code-block'>x = 10 / 2<br>print(type(x))</div>",
+                options: ["int", "str", "float", "bool"],
+                timeLimit: 200
+            },
+            {
+                id: 7,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>p = 7<br>q = 7<br>print(p != q)</div>",
+                options: ["True", "8", "False", "0"],
+                timeLimit: 200
+            },
+            {
+                id: 8,
+                text: "Qual é o resultado do seguinte código, que parece correto, mas pode enganar?<br><div class='code-block'>x = 20<br>y = 4<br>print(x / y + 1)</div>",
+                options: ["6.0", "5.0", "80", "16"],
+                timeLimit: 200
+            },
+            {
+                id: 9,
+                text: "Qual é o valor de y após a execução do seguinte código?<br><div class='code-block'>y = 12<br>y //= 5<br>print(y)</div>",
+                options: ["3", "60", "7", "2"],
+                timeLimit: 200
+            },
+            {
+                id: 10,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>texto = 'python'<br>letra = 'z'<br>print(letra not in texto)</div>",
+                options: ["False", "python", "z", "True"],
+                timeLimit: 200
+            },
+            {
+                id: 11,
+                text: "Qual é o resultado do seguinte código usando concatenação?<br><div class='code-block'>nome = 'Ana'<br>saudacao = 'Olá, ' + nome + '!'<br>print(saudacao)</div>",
+                options: ["Olá, nome!", "Ana", "Olá, Ana!", "Erro"],
+                timeLimit: 200
+            },
+            {
+                id: 12,
+                text: "Qual é o resultado do seguinte código, que parece correto, mas pode enganar?<br><div class='code-block'>preco = 100<br>desconto = 30<br>preco_final = preco - desconto / 2<br>print(preco_final)</div>",
+                options: ["70", "85", "50", "Erro"],
+                timeLimit: 200
+            },
+            {
+                id: 13,
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>nota = 85<br>frequencia = 70<br>if nota >= 70 and frequencia >= 75:<br>    print('Aprovado')<br>else:<br>    print('Reprovado')</div>",
+                options: ["Aprovado", "Erro", "Nenhum resultado", "Reprovado"],
+                timeLimit: 200
+            },
+            {
+                id: 14,
+                text: "Qual é o resultado do seguinte código, que pode gerar confusão?<br><div class='code-block'>idade = 16<br>if idade >= 16:<br>    print('Pode votar')<br>else:<br>    print('Não pode votar')<br>if idade >= 18:<br>    print('Pode dirigir')</div>",
+                options: ["Pode votar Pode dirigir", "Pode votar", "Não pode votar", "Erro"],
+                timeLimit: 200
+            },
+            {
+                id: 15,
+                text: "Qual é o resultado do seguinte código com indentação incorreta que não causa erro, mas altera o comportamento?<br><div class='code-block'>idade = 20<br>if idade >= 18:<br>print('Adulto')<br>else:<br>    print('Menor')</div>",
+                options: ["Adulto", "Menor", "Erro", "Nenhum resultado"],
+                timeLimit: 200
+            },
+            {
+                id: 16,
+                text: "Qual é o resultado do seguinte código com concatenação e casting?<br><div class='code-block'>nome = 'João'<br>idade = 15<br>print('Olá, ' + nome + ', você tem ' + str(idade) + ' anos')</div>",
+                options: ["Olá, João, você tem 15 anos", "Erro", "João tem 15 anos", "Olá, nome, você tem idade anos"],
+                timeLimit: 200
+            },
+            {
+                id: 17,
+                text: "Qual é o resultado do seguinte código, que parece calcular uma média corretamente, mas pode enganar?<br><div class='code-block'>nota1 = 8<br>nota2 = 6<br>media = nota1 + nota2 / 2<br>print(media)</div>",
+                options: ["7.0", "11.0", "14.0", "Erro"],
+                timeLimit: 200
+            },
+            {
+                id: 18,
+                text: "Reorganize os passos abaixo para criar um algoritmo que calcula o preço final de um produto com desconto. Insira o número da ordem (1 a 4) em cada caixa.<br>Passos desordenados:<br>3. Ler o percentual de desconto<br>2. Exibir o preço final<br>1. Ler o preço do produto<br>4. Calcular o preço final = preço - (preço * desconto / 100)",
+                options: ["1", "2", "3", "4"],
+                timeLimit: 300
+            },
+            {
+                id: 19,
+                text: "Reorganize os passos abaixo para criar um algoritmo que verifica se um número é positivo ou negativo. Insira o número da ordem (1 a 3) em cada caixa.<br>Passos desordenados:<br>2. Ler o número do usuário<br>3. Senão, exibir 'Negativo'<br>1. Se número >= 0, exibir 'Positivo'",
+                options: ["1", "2", "3"],
+                timeLimit: 180
+            },
+            {
+                id: 20,
+                text: "Reorganize os passos abaixo para criar um algoritmo que verifica se um aluno foi aprovado com base na nota. Insira o número da ordem (1 a 3) em cada caixa.<br>Passos desordenados:<br>1. Se nota >= 7, exibir 'Aprovado'<br>3. Senão, exibir 'Reprovado'<br>2. Ler a nota do aluno",
+                options: ["1", "2", "3"],
+                timeLimit: 180
+            },
+            {
+                id: 21,
+                text: "Reorganize os passos abaixo para criar um algoritmo que programa um drone para realizar entregas. Insira o número da ordem (1 a 12) em cada caixa.<br>Passos desordenados:<br>7. Monitorar espaço aéreo para outros drones ou aeronaves<br>3. Escanear código de barras do pacote para detalhes da entrega<br>10. Liberar pacote no ponto de entrega designado<br>2. Verificar nível de carga da bateria<br>8. Navegar até o endereço de entrega<br>5. Calcular trajeto de voo até o endereço de entrega<br>11. Retornar à estação de despacho<br>4. Fixar pacote no compartimento de carga<br>12. Desligar o sistema de propulsão<br>1. Ativar sistema de propulsão do drone<br>9. Confirmar localização de entrega usando GPS<br>6. Decolar da estação de despacho",
+                options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+                timeLimit: 400
+            },
+            {
+                id: 22,
+                text: "Escreva um código em Python que crie variáveis para armazenar o nome e a idade de uma pessoa e exiba uma mensagem usando concatenação com f-strings. Exemplo de saída: 'Ana tem 20 anos'. Teste no Colab.<br><textarea class='w-full p-2 border rounded-lg' rows='4' id='answer-22' oninput='saveAnswer(22)'></textarea>",
+                options: [],
+                timeLimit: 900,
+                requiresColab: true
+            },
+            {
+                id: 23,
+                text: "Escreva um código em Python que crie uma variável para armazenar o preço de um produto e exiba o preço com um desconto de 10% usando um operador aritmético. Exemplo de saída: 'Preço com desconto: 90.0'. Teste no Colab.<br><textarea class='w-full p-2 border rounded-lg' rows='4' id='answer-23' oninput='saveAnswer(23)'></textarea>",
+                options: [],
+                timeLimit: 900,
+                requiresColab: true
+            },
+            {
+                id: 24,
+                text: "Escreva um código em Python que peça ao usuário sua idade e verifique se ele pode votar (idade >= 16). Exiba uma mensagem usando concatenação. Exemplo de saída: 'Olá, João, você pode votar'. Teste no Colab.<br><textarea class='w-full p-2 border rounded-lg' rows='4' id='answer-24' oninput='saveAnswer(24)'></textarea>",
+                options: [],
+                timeLimit: 900,
+                requiresColab: true
+            },
+            {
+                id: 25,
+                text: "Escreva um código em Python que peça ao usuário uma nota (0 a 10) e classifique-a: 'Aprovado' (nota >= 7), 'Recuperação' (nota >= 5 e < 7), ou 'Reprovado' (nota < 5). Exiba com concatenação. Exemplo de saída: 'Nota 8: Aprovado'. Teste no Colab.<br><textarea class='w-full p-2 border rounded-lg' rows='4' id='answer-25' oninput='saveAnswer(25)'></textarea>",
+                options: [],
+                timeLimit: 900,
+                requiresColab: true
+            },
+            {
+                id: 26,
+                text: "<h3>Aventura Final de RPG</h3><p>Você está criando um mini livro-jogo de RPG para iniciantes, onde o jogador faz escolhas que definem sua aventura. O programa deve:</p><ul><li>Escolha da classe: Perguntar: 'Você prefere lutar com: espada, magia ou furtividade?' e, com base na resposta (em minúsculas), definir a classe:<ul><li>'espada' → Guerreiro</li><li>'magia' → Mago</li><li>'nada' → Ladino</li><li>Qualquer outra resposta → Aventureiro sem classe</li></ul></li><li>Escolha do nome: Solicitar que o jogador digite o nome do personagem. Se o nome for vazio (apenas espaços ou nada), atribuir 'Aventureiro Desconhecido'.</li><li>Escolha da arma: Perguntar: 'Escolha sua arma: espada longa, cajado arcano ou adaga afiada.' Com base na resposta (em minúsculas), atribuir a arma correspondente. Se inválida, atribuir 'nenhuma arma'.</li><li>Escolha do item: Perguntar: 'Qual item você carrega: poção de cura, mapa antigo ou corda resistente?' Com base na resposta (em minúsculas), atribuir o item. Se inválido, atribuir 'nenhum item'.</li><li>Escolha do destino: Perguntar: 'Para onde você vai: floresta sombria, montanha gelada ou vila tranquila?' Com base na resposta (em minúsculas), atribuir o destino. Se inválido, atribuir 'lugar desconhecido'.</li><li>Resumo final: Exibir um resumo concatenando todas as escolhas, como: 'Você é [nome], um [classe] que carrega [arma] e [item]. Sua aventura começa em [destino].'</li><li>Confirmação: Perguntar: 'Deseja iniciar o jogo? (sim/não)' Se a resposta for 'sim' (em minúsculas), exibir 'Aventura iniciada! Boa sorte!'. Se for 'não', exibir 'Até a próxima aventura!'. Qualquer outra resposta exibe 'Resposta inválida. Aventura cancelada.'.</li></ul><p>Escreva o código em Python e teste no Colab.</p><div class='flex flex-col'><div class='w-full'></div><div class='w-full'><div class='notes-area'><label class='block mb-2'>Anotações:</label></div></div></div><p class='text-blue-500 mt-2'>Nota: Use o Google Colab para testar seu código.</p>",
+                options: [],
+                timeLimit: null,
+                requiresColab: true
+            }
+        ];
+
+        function showStartScreen() {
+            document.getElementById("content").innerHTML = `
+                <div class="start-screen">
+                    <h2 class="text-2xl font-bold mb-6">Bem-vindo à Prova Online</h2>
+                    <p class="text-center mb-4">Digite seu nome para iniciar a prova:</p>
+                    <input type="text" id="student-name" class="w-full max-w-xs p-2 border rounded-lg mb-4" placeholder="Digite seu nome" required>
+                    <button id="start-prova" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition">Iniciar Prova</button>
+                </div>
+            `;
+            document.getElementById("controls").innerHTML = "";
+            document.getElementById("timer").innerText = "";
+            document.getElementById("warning").classList.add("hidden");
+            const startButton = document.getElementById("start-prova");
+            if (startButton) {
+                startButton.addEventListener("click", () => {
+                    const name = document.getElementById("student-name").value.trim();
+                    if (name) {
+                        studentName = name;
+                        startProva();
+                    } else {
+                        alert("Por favor, digite seu nome!");
+                    }
+                });
+            }
+        }
+
+        function startProva() {
+            currentQuestion = 0;
+            answers = {};
+            answerChanges = {};
+            responseTimes = {};
+            infractions = [];
+            timeAway = {};
+            document.getElementById("controls").innerHTML = `
+                <button id="confirm" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">Confirmar Resposta</button>
+                <button id="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition hidden">Enviar Prova</button>
+            `;
+            document.getElementById("confirm").addEventListener("click", confirmAnswer);
+            document.getElementById("submit").addEventListener("click", submitProva);
+            showQuestion();
+        }
+
+        function showQuestion() {
+            clearInterval(timerInterval);
+            clearInterval(blinkInterval);
+            document.title = "Prova Online";
+            const q = quizData[currentQuestion];
+            document.getElementById("header-title").innerText = `Prova Online - ${studentName}`;
+            const contentDiv = document.getElementById("content");
+            if (currentQuestion >= quizData.length) {
+                contentDiv.innerHTML = "<p class='text-center'>Prova finalizada! Clique em 'Enviar Prova'.</p>";
+                document.getElementById("confirm").classList.add("hidden");
+                document.getElementById("submit").classList.remove("hidden");
+                document.getElementById("timer").innerText = "";
+                return;
+            }
+            let html = `<div class="question"><h2 class="text-xl font-semibold mb-4">Questão ${q.id}/${quizData.length}: ${q.text}</h2>`;
+            if (q.options.length > 0) {
+                if (q.id >= 18 && q.id <= 21) {
+                    const steps = q.text.match(/(\d+\..+?(?=<br>|\n|$))/g) || [];
+                    html += `<div id="reorder-${q.id}" class="reorder-container">`;
+                    steps.forEach((step, index) => {
+                        const stepNum = step.match(/\d+/)[0];
+                        const stepText = step.replace(/^\d+\.\s*/, '');
+                        const savedOrder = answers[q.id] ? answers[q.id].match(new RegExp(`${stepNum}\\.\\s*${stepText.replace(/'/g, "\\'")}`, 'i'))?.[0] : null;
+                        const orderNum = savedOrder ? savedOrder.match(/^\d+/)[0] : "";
+                        html += `<div class="reorder-item"><input type="number" id="order-${q.id}-${stepNum}" min="1" max="${q.options.length}" value="${orderNum}" oninput="saveAnswer(${q.id})" style="width: 50px; margin-right: 1rem;"> ${stepText}</div>`;
+                    });
+                    html += `<p class="mt-2">Ordem selecionada: <span id="order-display-${q.id}"></span></p>`;
+                    html += `</div>`;
+                } else {
+                    q.options.forEach(option => {
+                        html += `<button class="option-button" onclick="selectOption('${option.replace(/'/g, "\\'")}', this)">${option}</button>`;
+                    });
+                }
+            } else {
+                html += `<textarea class="w-full p-2 border rounded-lg" rows="4" id="answer-${q.id}" oninput="saveAnswer(${q.id})">${answers[q.id] || ''}</textarea>`;
+                if (q.requiresColab) {
+                    html += `<p class="text-blue-500 mt-2">Nota: Use o Google Colab para testar seu código.</p>`;
+                }
+            }
+            html += `</div>`;
+            contentDiv.innerHTML = html;
+            document.getElementById("confirm").classList.remove("hidden");
+            document.getElementById("submit").classList.add("hidden");
+            document.getElementById("warning").classList.add("hidden");
+            timeAway[q.id] = timeAway[q.id] || 0;
+            answerChanges[q.id] = answerChanges[q.id] || [];
+            selectedOption = null;
+            questionStartTime = Date.now();
+            startTimer(q.timeLimit, q.id);
+            updateReorderDisplay(q.id);
+        }
+
+        function selectOption(option, button) {
+            const q = quizData[currentQuestion];
+            if (selectedOption !== option) {
+                if (selectedOption !== null) {
+                    answerChanges[q.id].push({
+                        from: selectedOption,
+                        to: option,
+                        timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                    });
+                }
+                selectedOption = option;
+                document.querySelectorAll(".option-button").forEach(btn => btn.classList.remove("selected"));
+                button.classList.add("selected");
+            }
+        }
+
+        function saveAnswer(qId) {
+            const q = quizData.find(q => q.id === qId);
+            if (q && q.options.length > 0 && q.id >= 18 && q.id <= 21) {
+                const steps = q.text.match(/(\d+\..+?(?=<br>|\n|$))/g) || [];
+                const orderMap = {};
+                let hasError = false;
+                steps.forEach(step => {
+                    const stepNum = step.match(/\d+/)[0];
+                    const stepText = step.replace(/^\d+\.\s*/, '');
+                    const input = document.getElementById(`order-${qId}-${stepNum}`);
+                    const order = input ? parseInt(input.value) || 0 : 0;
+                    if (order < 1 || order > q.options.length) {
+                        hasError = true;
+                    } else if (orderMap[order]) {
+                        hasError = true;
+                    } else {
+                        orderMap[order] = `${stepNum}. ${stepText}`;
+                    }
+                });
+                if (hasError || Object.keys(orderMap).length !== q.options.length) {
+                    answers[qId] = "Ordem inválida ou incompleta";
+                } else {
+                    answers[qId] = Object.keys(orderMap)
+                        .sort((a, b) => a - b)
+                        .map(order => orderMap[order])
+                        .join(", ");
+                    answerChanges[qId] = answerChanges[qId] || [];
+                    answerChanges[qId].push({
+                        from: answers[qId] || "",
+                        to: answers[qId],
+                        timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                    });
+                }
+                updateReorderDisplay(qId);
+            } else {
+                const textarea = document.getElementById(`answer-${qId}`) || document.getElementById(`answer-${qId}-code`) || document.getElementById(`answer-${qId}-notes`);
+                if (textarea) {
+                    const newAnswer = textarea.value.trim();
+                    const key = qId === 26 ? (textarea.id.includes('code') ? `${qId}-code` : `${qId}-notes`) : qId;
+                    if (answers[key] && answers[key] !== newAnswer) {
+                        answerChanges[qId] = answerChanges[qId] || [];
+                        answerChanges[qId].push({
+                            from: answers[key] || "",
+                            to: newAnswer,
+                            timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                        });
+                    }
+                    answers[key] = newAnswer;
+                }
+            }
+        }
+
+        function updateReorderDisplay(qId) {
+            const display = document.getElementById(`order-display-${qId}`);
+            if (display) {
+                display.innerText = answers[qId] || "";
+            }
+        }
+
+        function confirmAnswer() {
+            const q = quizData[currentQuestion];
+            if (q.options.length > 0 && q.id < 18 && !selectedOption) {
+                alert("Por favor, selecione uma opção antes de confirmar.");
+                return;
+            }
+            if (q.id >= 18 && q.id <= 21 && (!answers[q.id] || answers[q.id].includes("Ordem inválida ou incompleta"))) {
+                alert("Por favor, insira uma ordem válida e completa para todos os passos.");
+                return;
+            }
+            if (q.options.length === 0) {
+                if (q.id === 26) {
+                    saveAnswer(q.id, "code");
+                    saveAnswer(q.id, "notes");
+                    if (!answers[`${q.id}-code`] && !answers[`${q.id}-notes`]) {
+                        alert("Por favor, preencha o código ou as anotações.");
+                        return;
+                    }
+                } else {
+                    saveAnswer(q.id);
+                    answers[q.id] = answers[q.id] || "Não respondida";
+                }
+            } else if (q.id < 18) {
+                answers[q.id] = selectedOption;
+            }
+            responseTimes[q.id] = Math.round((Date.now() - questionStartTime) / 1000);
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function recordInfraction(message) {
+            const q = quizData[currentQuestion];
+            if (!q || !q.requiresColab) {
+                infractions.push({
+                    message,
+                    questionId: q ? q.id : -1,
+                    timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                });
+                const warning = document.getElementById("warning");
+                warning.innerText = `${message} (Infrações: ${infractions.length})`;
+                warning.classList.remove("hidden");
+            }
+        }
+
+        function startAwayTimer(qId) {
+            let startTime = Date.now();
+            return () => {
+                const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+                timeAway[qId] += timeSpent;
+            };
+        }
+
+        function startTimer(timeLimit, qId) {
+            let timeLeft = timeLimit;
+            document.getElementById("timer").innerText = `Tempo restante: ${timeLeft} segundos`;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById("timer").innerText = `Tempo restante: ${timeLeft} segundos`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    recordInfraction(`Tempo esgotado na Questão ${qId}`);
+                    confirmAnswer();
+                }
+            }, 1000);
+        }
+
+        function startBlink() {
+            let isAlert = false;
+            clearInterval(blinkInterval);
+            blinkInterval = setInterval(() => {
+                document.title = isAlert ? "⚠ Prova Online - Retorne!" : "Prova Online";
+                isAlert = !isAlert;
+                if (document.hasFocus()) {
+                    clearInterval(blinkInterval);
+                    document.title = "Prova Online";
+                }
+            }, 500);
+        }
+
+        function submitProva() {
+            clearInterval(timerInterval);
+            clearInterval(blinkInterval);
+            document.title = "Prova Online";
+            if (confirm("Deseja enviar a prova?")) {
+                const result = {
+                    studentName,
+                    timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+                    questions: quizData.map(q => ({
+                        id: q.id,
+                        text: q.text.replace(/<[^>]+>/g, ''),
+                        answer: answers[q.id] || answers[`${q.id}-code`] || answers[`${q.id}-notes`] || "Não respondida",
+                        responseTime: responseTimes[q.id] || 0,
+                        answerChanges: answerChanges[q.id] || [],
+                        timeAway: timeAway[q.id] || 0
+                    })),
+                    infractions
+                };
+
+                const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                const sanitizedName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+                a.href = url;
+                a.download = `prova_${sanitizedName}_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setFontSize(12);
+                doc.text("Relatório da Prova Online", 10, 10);
+                let y = 20;
+                const pageHeight = 280;
+
+                doc.text(`Aluno: ${studentName}`, 10, y);
+                y += 10;
+
+                quizData.forEach(q => {
+                    let textLines = doc.splitTextToSize(
+                        `Questão ${q.id}: ${q.text.replace(/<br>/g, '\n').replace(/<div class='code-block'>[\s\S]*?<\/div>/g, match => match.replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''))}`,
+                        180
+                    );
+                    if (y + (textLines.length * 7) > pageHeight) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(textLines, 10, y);
+                    y += textLines.length * 7;
+
+                    const answerText = `Resposta: ${answers[q.id] || answers[`${q.id}-code`] || answers[`${q.id}-notes`] || 'Não respondida'}`;
+                    let answerLines = doc.splitTextToSize(answerText, 180);
+                    if (y + (answerLines.length * 7) > pageHeight) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(answerLines, 10, y);
+                    y += answerLines.length * 7;
+
+                    if (timeAway[q.id] > 0) {
+                        doc.text(`Tempo fora da janela: ${timeAway[q.id]} segundos`, 10, y);
+                        y += 10;
+                    }
+                    if (q.requiresColab) {
+                        doc.text("Questão com Colab. Trava de troca de tela desativada.", 10, y);
+                        y += 10;
+                    }
+                    y += 2;
+                });
+
+                if (infractions.length > 0) {
+                    if (y + (infractions.length * 10) > pageHeight) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text("Registro de Infrações:", 10, y);
+                    y += 10;
+                    infractions.forEach((inf, index) => {
+                        const infractionText = `${index + 1}. ${inf.message} (Horário: ${inf.timestamp})`;
+                        let infractionLines = doc.splitTextToSize(infractionText, 180);
+                        if (y + (infractionLines.length * 7) > pageHeight) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        doc.text(infractionLines, 10, y);
+                        y += infractionLines.length * 7;
+                    });
+                    doc.text(`Total de infrações: ${infractions.length}`, 10, y);
+                    y += 10;
+                } else {
+                    doc.text("Nenhuma infração registrada.", 10, y);
+                    y += 10;
+                }
+
+                const now = new Date();
+                doc.text(`Enviado em: ${now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`, 10, y);
+                doc.save(`prova_respostas_${sanitizedName}_${now.toISOString().slice(0, 10)}.pdf`);
+
+                document.getElementById("content").innerHTML = "<p class='text-center'>Prova enviada com sucesso! PDF e JSON gerados.</p>";
+                document.getElementById("confirm").classList.add("hidden");
+                document.getElementById("submit").classList.add("hidden");
+                document.getElementById("timer").innerText = "";
+            }
+        }
+
+        let awayTimer = null;
+        document.addEventListener("visibilitychange", () => {
+            const q = quizData[currentQuestion];
+            if (document.visibilityState === "hidden" && q) {
+                if (!q.requiresColab) {
+                    awayTimer = startAwayTimer(q.id);
+                    startBlink();
+                }
+            } else if (document.visibilityState === "visible" && awayTimer && q) {
+                if (!q.requiresColab) {
+                    awayTimer();
+                    awayTimer = null;
+                    clearInterval(blinkInterval);
+                    document.title = "Prova Online";
+                }
+            }
+        });
+
+        window.onblur = () => {
+            const q = quizData[currentQuestion];
+            if (q && !awayTimer && !q.requiresColab) {
+                awayTimer = startAwayTimer(q.id);
+                recordInfraction("Troca de janela detectada");
+                startBlink();
+            }
+        };
+
+        window.onfocus = () => {
+            if (awayTimer) {
+                const q = quizData[currentQuestion];
+                if (!q || !q.requiresColab) {
+                    awayTimer();
+                    awayTimer = null;
+                    clearInterval(blinkInterval);
+                    document.getElementById("warning").classList.add("hidden");
+                    document.title = "Prova Online";
+                }
+            }
+        };
+
+        document.addEventListener("keydown", (e) => {
+            const q = quizData[currentQuestion];
+            if (q) {
+                if (e.key === "F12" || (e.ctrlKey && e.key === "c")) {
+                    e.preventDefault();
+                    recordInfraction("Ação não permitida detectada (F12 ou Ctrl+C)");
+                } else if (e.key === "PrintScreen") {
+                    e.preventDefault();
+                    recordInfraction("Tentativa de captura de tela detectada");
+                }
+            }
+        });
+
+        document.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            const q = quizData[currentQuestion];
+            if (q) {
+                recordInfraction("Botão direito clicado");
+            }
+        });
+
+        document.addEventListener("selectstart", (e) => {
+            e.preventDefault();
+            const q = quizData[currentQuestion];
+            if (q) {
+                recordInfraction("Tentativa de seleção/arrastar detectada");
+            }
+        });
+
+        document.addEventListener("mousedown", (e) => {
+            dragStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (dragStart && Date.now() - dragStart.time > 200) {
+                const q = quizData[currentQuestion];
+                if (q && (Math.abs(e.clientX - dragStart.x) > 10 || Math.abs(e.clientY - dragStart.y) > 10)) {
+                    recordInfraction("Tentativa de arrastar detectada");
+                    dragStart = null;
+                }
+            }
+        });
+
+        document.addEventListener("mouseup", () => {
+            dragStart = null;
+        });
+
+        showStartScreen();
+    </script>
 </body>
 </html>
