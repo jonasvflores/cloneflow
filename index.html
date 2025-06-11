@@ -1,48 +1,48 @@
 <script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+            var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+            var firstSheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheetName];
 
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
+            // Convert sheet to JSON to filter blank rows
+            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+            // Filter out blank rows (rows where all cells are empty, null, or undefined)
+            var filteredData = jsonData.filter(row => row.some(filledCell));
 
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
+            // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+            var headerRowIndex = filteredData.findIndex((row, index) =>
+              row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+            );
+            // Fallback
+            if (headerRowIndex === -1 || headerRowIndex > 25) {
+              headerRowIndex = 0;
             }
+
+            // Convert filtered JSON back to CSV
+            var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+            csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+            return csv;
+        } catch (e) {
+            console.error(e);
+            return "";
         }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+    }
+    return gk_fileData[filename] || "";
+    }
+</script><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prova Online</title>
+    <title>Prova de Programação</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -60,12 +60,15 @@
 </head>
 <body class="bg-gray-200 p-6">
     <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-xl" id="main-content">
-        <h1 class="text-3xl font-bold mb-6 text-center" id="header-title">Prova Online</h1>
+        <h1 class="text-3xl font-bold mb-6 text-center" id="header-title">Prova de Programação</h1>
         <div id="content" class="mb-6"></div>
         <div id="timer" class="timer"></div>
         <div class="flex justify-center space-x-4" id="controls"></div>
         <p id="warning" class="text-red-500 font-semibold hidden mt-4 text-center"></p>
     </div>
+    <footer class="text-center py-4 text-gray-600">
+        Prova de programação - Informatize NH - Prof. Jonas Flores
+    </footer>
     <script type="text/javascript">
         var gk_isXlsx = false;
         var gk_xlsxFileLookup = {};
@@ -181,7 +184,7 @@
             },
             {
                 id: 12,
-                text: "Qual é o resultado do seguinte código, que parece correto, mas pode enganar?<br><div class='code-block'>preco = 100<br>desconto = 30<br>preco_final = preco - desconto / 2<br>print(preco_final)</div>",
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>preco = 100<br>desconto = 30<br>preco_final = preco - desconto / 2<br>print(preco_final)</div>",
                 options: ["70", "85", "50", "Erro"],
                 timeLimit: 200
             },
@@ -193,13 +196,13 @@
             },
             {
                 id: 14,
-                text: "Qual é o resultado do seguinte código, que pode gerar confusão?<br><div class='code-block'>idade = 16<br>if idade >= 16:<br>    print('Pode votar')<br>else:<br>    print('Não pode votar')<br>if idade >= 18:<br>    print('Pode dirigir')</div>",
+                text: "Qual é o resultado do seguinte código, que pode até estar executar o cálculo, mas pode gerar confusão?<br><div class='code-block'>idade = 16<br>if idade >= 16:<br>    print('Pode votar')<br>else:<br>    print('Não pode votar')<br>if idade >= 18:<br>    print('Pode dirigir')</div>",
                 options: ["Pode votar Pode dirigir", "Pode votar", "Não pode votar", "Erro"],
                 timeLimit: 200
             },
             {
                 id: 15,
-                text: "Qual é o resultado do seguinte código com indentação incorreta que não causa erro, mas altera o comportamento?<br><div class='code-block'>idade = 20<br>if idade >= 18:<br>print('Adulto')<br>else:<br>    print('Menor')</div>",
+                text: "Qual é o resultado do seguinte código?<br><div class='code-block'>idade = 20<br>if idade >= 18:<br>print('Adulto')<br>else:<br>    print('Menor')</div>",
                 options: ["Adulto", "Menor", "Erro", "Nenhum resultado"],
                 timeLimit: 200
             },
@@ -279,7 +282,7 @@
         function showStartScreen() {
             document.getElementById("content").innerHTML = `
                 <div class="start-screen">
-                    <h2 class="text-2xl font-bold mb-6">Bem-vindo à Prova Online</h2>
+                    <h2 class="text-2xl font-bold mb-6">Olá, dev</h2>
                     <p class="text-center mb-4">Digite seu nome para iniciar a prova:</p>
                     <input type="text" id="student-name" class="w-full max-w-xs p-2 border rounded-lg mb-4" placeholder="Digite seu nome" required>
                     <button id="start-prova" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition">Iniciar Prova</button>
@@ -321,9 +324,9 @@
         function showQuestion() {
             clearInterval(timerInterval);
             clearInterval(blinkInterval);
-            document.title = "Prova Online";
+            document.title = "Prova de Programação";
             const q = quizData[currentQuestion];
-            document.getElementById("header-title").innerText = `Prova Online - ${studentName}`;
+            document.getElementById("header-title").innerText = `Prova de Programação - ${studentName}`;
             const contentDiv = document.getElementById("content");
             if (currentQuestion >= quizData.length) {
                 contentDiv.innerHTML = "<p class='text-center'>Prova finalizada! Clique em 'Enviar Prova'.</p>";
@@ -516,11 +519,11 @@
             let isAlert = false;
             clearInterval(blinkInterval);
             blinkInterval = setInterval(() => {
-                document.title = isAlert ? "⚠ Prova Online - Retorne!" : "Prova Online";
+                document.title = isAlert ? "⚠ Prova de Programação - Retorne!" : "Prova de Programação";
                 isAlert = !isAlert;
                 if (document.hasFocus()) {
                     clearInterval(blinkInterval);
-                    document.title = "Prova Online";
+                    document.title = "Prova de Programação";
                 }
             }, 500);
         }
@@ -528,7 +531,7 @@
         function submitProva() {
             clearInterval(timerInterval);
             clearInterval(blinkInterval);
-            document.title = "Prova Online";
+            document.title = "Prova de Programação";
             if (confirm("Deseja enviar a prova?")) {
                 const result = {
                     studentName,
@@ -556,7 +559,7 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 doc.setFontSize(12);
-                doc.text("Relatório da Prova Online", 10, 10);
+                doc.text("Relatório da Prova de Programação", 10, 10);
                 let y = 20;
                 const pageHeight = 280;
 
@@ -643,7 +646,7 @@
                     awayTimer();
                     awayTimer = null;
                     clearInterval(blinkInterval);
-                    document.title = "Prova Online";
+                    document.title = "Prova de Programação";
                 }
             }
         });
@@ -665,7 +668,7 @@
                     awayTimer = null;
                     clearInterval(blinkInterval);
                     document.getElementById("warning").classList.add("hidden");
-                    document.title = "Prova Online";
+                    document.title = "Prova de Programação";
                 }
             }
         };
